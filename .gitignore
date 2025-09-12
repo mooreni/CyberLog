@@ -1,0 +1,21 @@
+# virtual env
+.venv/
+
+# python cache
+__pycache__/
+*.pyc
+
+# local env/keys
+.env
+*.env
+
+# local databases & logs
+*.db
+*.sqlite3
+*.log
+
+# OS junk
+.DS_Store
+
+# demo DB name we might create later
+rsec.db

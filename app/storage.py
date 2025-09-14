@@ -4,6 +4,8 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 from app.models import AlertIn
+from typing import Optional
+from app.models import AlertReciept
 
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -50,3 +52,14 @@ def add_alert(alert: AlertIn) -> str:
         conn.close()
 
     return alert_id
+
+def get_alert(alert_id: str) -> Optional[AlertReciept]:
+    """Fetch one alert by id. Return AlertReciept or None if not found."""
+    conn = _connect()
+    try:
+        row = conn.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,)).fetchone()
+        if row:
+            return AlertOut(**dict(row))
+        return None
+    finally:
+        conn.close()

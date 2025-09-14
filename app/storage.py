@@ -59,7 +59,7 @@ def get_alert(alert_id: str) -> Optional[AlertReciept]:
     try:
         row = conn.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,)).fetchone()
         if row:
-            return AlertOut(**dict(row))
+            return AlertReciept(**dict(row))
         return None
     finally:
         conn.close()

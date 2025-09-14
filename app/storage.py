@@ -4,7 +4,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 from app.models import AlertIn
-from typing import Optional
+from typing import Optional, List
 from app.models import AlertReciept
 
 def _connect() -> sqlite3.Connection:
@@ -61,5 +61,27 @@ def get_alert(alert_id: str) -> Optional[AlertReciept]:
         if row:
             return AlertReciept(**dict(row))
         return None
+    finally:
+        conn.close()
+
+def list_alerts(limit: int = 10, offset: int = 0) -> List[AlertReciept]:
+    """Return a list of alerts, newest first."""
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM alerts ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            (limit, offset),
+        ).fetchall()
+        return [AlertReciept(**dict(r)) for r in rows]
+    finally:
+        conn.close()
+
+def delete_alert(alert_id: str) -> bool:
+    """Delete one alert by id. Return True if deleted, False if missing."""
+    conn = _connect()
+    try:
+        deleted = conn.execute("DELETE FROM alerts WHERE id = ?", (alert_id,))
+        conn.commit()
+        return deleted.rowcount > 0
     finally:
         conn.close()

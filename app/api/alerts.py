@@ -1,7 +1,21 @@
-from fastapi import APIRouter, HTTPException
-from app import storage, models
+from fastapi import APIRouter, HTTPException, Depends, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from app import storage, models, auth
 
-router = APIRouter(prefix="/alerts", tags=["alerts"])
+security_scheme = HTTPBearer()
+def require_token(creds: HTTPAuthorizationCredentials = Security(security_scheme)):
+    # creds.scheme should be "Bearer", creds.credentials is the token string
+    if not creds or creds.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
+
+    token = creds.credentials
+    info = auth.verify_token(token)
+    if not info:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return {**info, "token": token}
+
+
+router = APIRouter(prefix="/alerts", tags=["alerts"], dependencies=[Depends(require_token)])
 
 @router.post("/", response_model=models.AlertReciept)
 def create_alert(alert: models.AlertIn):

@@ -15,7 +15,7 @@ class AlertReciept(BaseModel):
     details: str | None = None
     created_at: datetime
 
-class LoginInfo(BaseModel):
+class LoginModel(BaseModel):
     email: str
     password: str
 

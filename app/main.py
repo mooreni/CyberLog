@@ -1,8 +1,9 @@
 from fastapi import FastAPI
-from app.api import alerts
+from app.api import alerts, login
 
 app = FastAPI(title="CyberLog")
 app.include_router(alerts.router)
+app.include_router(login.router)
 
 @app.get("/health")
 def health_check():

@@ -1,21 +1,37 @@
-from fastapi import APIRouter, HTTPException, Depends, Security
+from fastapi import APIRouter, HTTPException, Depends, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app import storage, models, auth
+
+from app import storage, models
+from app.auth_jwt import verify_access_token
 
 security_scheme = HTTPBearer()
-def require_token(creds: HTTPAuthorizationCredentials = Security(security_scheme)):
-    # creds.scheme should be "Bearer", creds.credentials is the token string
+
+def require_jwt(creds: HTTPAuthorizationCredentials = Security(security_scheme)):
+    # 1) Ensure the header is present and formatted as 'Bearer <token>'
     if not creds or creds.scheme.lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid Authorization header format")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format"
+        )
 
     token = creds.credentials
-    info = auth.verify_token(token)
-    if not info:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return {**info, "token": token}
 
+    # 2) Verify the JWT (signature + exp) using our server secret/algorithm
+    claims = verify_access_token(token)
+    if not claims:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
 
-router = APIRouter(prefix="/alerts", tags=["alerts"], dependencies=[Depends(require_token)])
+    
+    return claims
+
+router = APIRouter(
+    prefix="/alerts",
+    tags=["alerts"],
+    dependencies=[Depends(require_jwt)],
+)
 
 @router.post("/", response_model=models.AlertReciept)
 def create_alert(alert: models.AlertIn):

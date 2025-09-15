@@ -3,9 +3,8 @@ DB_PATH = Path(__file__).parent.parent / "alerts.db"
 import sqlite3
 import uuid
 from datetime import datetime, timezone
-from app.models import AlertIn
-from typing import Optional, List
-from app.models import AlertReciept
+from app import models
+from typing import List, Optional
 
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -33,7 +32,7 @@ def _init_db() -> None:
 
 _init_db()
 
-def add_alert(alert: AlertIn) -> str:
+def add_alert(alert: models.AlertIn) -> str:
     """Insert a new alert row and return its generated id."""
     alert_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
@@ -53,18 +52,18 @@ def add_alert(alert: AlertIn) -> str:
 
     return alert_id
 
-def get_alert(alert_id: str) -> Optional[AlertReciept]:
+def get_alert(alert_id: str) -> Optional[models.AlertReciept]:
     """Fetch one alert by id. Return AlertReciept or None if not found."""
     conn = _connect()
     try:
         row = conn.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,)).fetchone()
         if row:
-            return AlertReciept(**dict(row))
+            return models.AlertReciept(**dict(row))
         return None
     finally:
         conn.close()
 
-def list_alerts(limit: int = 10, offset: int = 0) -> List[AlertReciept]:
+def list_alerts(limit: int = 10, offset: int = 0) -> List[models.AlertReciept]:
     """Return a list of alerts, newest first."""
     conn = _connect()
     try:
@@ -72,7 +71,7 @@ def list_alerts(limit: int = 10, offset: int = 0) -> List[AlertReciept]:
             "SELECT * FROM alerts ORDER BY created_at DESC LIMIT ? OFFSET ?",
             (limit, offset),
         ).fetchall()
-        return [AlertReciept(**dict(r)) for r in rows]
+        return [models.AlertReciept(**dict(r)) for r in rows]
     finally:
         conn.close()
 
@@ -85,3 +84,55 @@ def delete_alert(alert_id: str) -> bool:
         return deleted.rowcount > 0
     finally:
         conn.close()
+
+def update_alert(alert_id: str, changes: models.AlertUpdate) -> Optional[models.AlertReciept]:
+    """Apply partial updates; return updated alert or None if not found."""
+    # Build SET clauses dynamically for provided fields
+    fields = []
+    values = []
+
+    if changes.title is not None:
+        fields.append("title = ?")
+        values.append(changes.title)
+    if changes.severity is not None:
+        fields.append("severity = ?")
+        values.append(changes.severity)
+    if changes.source is not None:
+        fields.append("source = ?")
+        values.append(changes.source)
+    if changes.details is not None:
+        fields.append("details = ?")
+        values.append(changes.details)
+
+    conn = _connect()
+    try:
+        sql = f"UPDATE alerts SET {', '.join(fields)} WHERE id = ?"
+        values.append(alert_id)
+        cur = conn.execute(sql, tuple(values))
+        conn.commit()
+        if cur.rowcount == 0:
+            return None
+    finally:
+        conn.close()
+
+    return get_alert(alert_id)
+
+def replace_alert(alert_id: str, data: models.AlertIn) -> Optional[models.AlertReciept]:
+    """Replace an alert completely with new data. Returns updated alert or None if missing."""
+    conn = _connect()
+    try:
+        cur = conn.execute(
+            """
+            UPDATE alerts
+            SET title = ?, severity = ?, source = ?, details = ?
+            WHERE id = ?
+            """,
+            (data.title, data.severity, data.source, data.details, alert_id),
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            return None
+    finally:
+        conn.close()
+
+    return get_alert(alert_id)

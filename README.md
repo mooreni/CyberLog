@@ -10,8 +10,6 @@ It demonstrates core backend concepts for a secure web service.
 - JWT-based authentication  
 - CRUD operations on alerts  
 - Data validation with Pydantic  
-- Containerized with Docker for easy deployment  
-
 ---
 
 ## Tech used
@@ -20,4 +18,3 @@ It demonstrates core backend concepts for a secure web service.
 - **SQLite** (storage)  
 - **Pydantic** (validation)  
 - **JWT** (authentication)  
-- **Docker** (packaging & deployment)  
